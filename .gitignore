@@ -1,13 +1,13 @@
-# Security & Copyright: Never commit proprietary game ROMs or binaries
-game_data/
-*.bin
-*.cue
+# Security & Copyright: Never commit raw disc dumps or full ISOs
 *.iso
 *.chd
 *.gba
 *.zip
-disc/
-build/
+disc/*.bin
+
+# Allow OpenBIOS (open-source MIT) and Web assets
+!bios/openbios.bin
+!tekken3_assets.bin.gz
 
 # OS / Tooling
 .DS_Store

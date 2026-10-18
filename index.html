@@ -2,8 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>TEKKEN 3 • Web Recomp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TEKKEN 3 • Web Recompiled Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
@@ -17,53 +19,43 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #000;
-      cursor: none;
+      background: #000;
+      color: #fff;
+      font-family: 'Rajdhani', sans-serif;
     }
 
-    body.show-cursor {
-      cursor: default;
-    }
-
-    #game-viewport {
-      width: 100vw;
-      height: 100vh;
+    #game-container {
+      position: absolute;
+      inset: 0;
       display: flex;
       justify-content: center;
       align-items: center;
-      position: relative;
       background: #000;
     }
 
-    #game {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    #game canvas, #game video {
-      width: 100%;
-      height: 100%;
+    #canvas {
+      width: 100vw;
+      height: 100vh;
       object-fit: contain;
       image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      outline: none;
+      border: none;
     }
 
-    /* 초기 스플래시 오버레이 */
+    /* Splash / Loading Screen */
     #splash-screen {
       position: absolute;
       inset: 0;
-      background: #000;
+      background: radial-gradient(circle at center, #111827 0%, #030712 100%);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      z-index: 999;
+      gap: 20px;
+      z-index: 50;
       cursor: pointer;
-      transition: opacity 0.4s ease;
-      text-align: center;
-      padding: 20px;
+      transition: opacity 0.5s ease;
     }
 
     #splash-screen.fade-out {
@@ -71,152 +63,361 @@
       pointer-events: none;
     }
 
-    .start-prompt {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 1.5rem;
-      font-weight: 800;
-      letter-spacing: 4px;
-      color: #ef4444;
-      text-transform: uppercase;
-      animation: pulse 1.5s infinite;
+    .title-box {
+      text-align: center;
+    }
+
+    .game-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 900;
+      letter-spacing: 6px;
+      color: #f43f5e;
+      text-shadow: 0 0 30px rgba(244, 63, 94, 0.7), 0 0 60px rgba(239, 68, 68, 0.4);
+      line-height: 1;
       margin-bottom: 8px;
     }
 
-    .sub-hint {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 0.9rem;
-      color: #64748b;
+    .game-sub {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(0.75rem, 1.8vw, 1.1rem);
+      letter-spacing: 4px;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 14px;
+      border-radius: 9999px;
+      background: rgba(244, 63, 94, 0.15);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      color: #f43f5e;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
       letter-spacing: 2px;
-      max-width: 500px;
-      line-height: 1.6;
+    }
+
+    .progress-box {
+      width: min(420px, 80vw);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #1e293b;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #334155;
+    }
+
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #ef4444, #f59e0b);
+      transition: width 0.15s ease-out;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
+    }
+
+    .status-text {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #cbd5e1;
+    }
+
+    .btn-start {
+      margin-top: 10px;
+      padding: 12px 36px;
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #fff;
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      border: 1px solid #f87171;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+      animation: pulse 1.5s infinite;
+      display: none;
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 0.35; }
-      50% { opacity: 1; }
+      0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); }
+      50% { transform: scale(1.04); box-shadow: 0 0 32px rgba(239, 68, 68, 0.8); }
     }
 
-    /* 미니멀 HUD */
-    .mini-hud {
+    .controls-hint {
+      position: absolute;
+      bottom: 24px;
+      color: #64748b;
+      font-size: 0.85rem;
+      letter-spacing: 1.5px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* Floating control bar overlay (hidden by default, shows on mousemove) */
+    #overlay-controls {
       position: absolute;
       top: 16px;
-      left: 16px;
-      opacity: 0;
-      transition: opacity 0.3s;
+      right: 16px;
       display: flex;
-      gap: 8px;
-      z-index: 100;
+      gap: 10px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 20;
     }
 
-    body.show-cursor .mini-hud {
-      opacity: 0.8;
+    body:hover #overlay-controls {
+      opacity: 1;
     }
 
-    .hud-tag {
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(8px);
-      padding: 4px 10px;
-      border-radius: 4px;
+    .btn-icon {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       color: #94a3b8;
-      font-size: 0.75rem;
-      font-family: monospace;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
     }
 
-    #rom-picker {
-      display: none;
+    .btn-icon:hover {
+      background: rgba(239, 68, 68, 0.8);
+      color: #fff;
+      border-color: #ef4444;
     }
   </style>
 </head>
 <body>
+  <div id="game-container">
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  </div>
 
-  <div id="game-viewport">
-    <div id="game"></div>
+  <div id="overlay-controls">
+    <button class="btn-icon" id="btn-fullscreen" title="전체화면 (F)">⛶</button>
+  </div>
 
-    <input type="file" id="rom-picker" accept=".bin,.cue,.iso,.chd,.zip">
-
-    <div id="splash-screen">
-      <div class="start-prompt">PRESS ANY KEY OR CLICK TO START</div>
-      <div class="sub-hint">TEKKEN 3 • BORDERLESS FULLSCREEN RUNTIME<br><span style="font-size: 0.75rem; color: #475569;">클릭하여 시작하거나 소장 중인 ROM(.bin/.iso)을 화면에 드래그하세요</span></div>
+  <div id="splash-screen">
+    <div class="title-box">
+      <h1 class="game-logo">TEKKEN 3</h1>
+      <div class="game-sub">Static Recompilation • WebAssembly</div>
+      <div class="badge">PURE WEB ENGINE • NO EMULATOR</div>
     </div>
 
-    <div class="mini-hud">
-      <span class="hud-tag">60 FPS</span>
-      <span class="hud-tag">WEB RECOMP</span>
-      <span class="hud-tag">F11: FULLSCREEN</span>
+    <div class="progress-box" id="progress-box">
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <div class="status-text" id="status-label">엔진 및 리소스 초기화 중...</div>
+    </div>
+
+    <button class="btn-start" id="btn-start">PRESS TO FIGHT</button>
+
+    <div class="controls-hint">
+      <strong>조작키</strong>: 이동: [방향키 / WASD] • 공격: [J] 왼손 / [K] 오른손 / [U] 왼발 / [I] 오른발<br>
+      시작: [ENTER] • 전체화면: [F 키 또는 더블클릭]
     </div>
   </div>
 
   <script>
-    const splash = document.getElementById('splash-screen');
-    const romPicker = document.getElementById('rom-picker');
-    let started = false;
-    let cursorTimer = null;
+    const statusLabel = document.getElementById('status-label');
+    const progressFill = document.getElementById('progress-fill');
+    const btnStart = document.getElementById('btn-start');
+    const splashScreen = document.getElementById('splash-screen');
+    const canvas = document.getElementById('canvas');
 
-    window.addEventListener('mousemove', () => {
-      document.body.classList.add('show-cursor');
-      clearTimeout(cursorTimer);
-      cursorTimer = setTimeout(() => {
-        document.body.classList.remove('show-cursor');
-      }, 2000);
+    let gameStarted = false;
+    let preloadedAssets = null;
+
+    // Fullscreen toggle
+    document.getElementById('btn-fullscreen').addEventListener('click', toggleFullscreen);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
     });
+    canvas.addEventListener('dblclick', toggleFullscreen);
 
-    function bootGame(urlOrBlob) {
-      if (started) return;
-      started = true;
-      splash.classList.add('fade-out');
-
-      if (document.documentElement.requestFullscreen) {
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    // Stream download with progress and gzip decompress
+    async function fetchAndDecompress(url, label) {
+      statusLabel.textContent = `${label} 다운로드 중...`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`${label} 다운로드 실패 (${response.status})`);
+
+      const contentLength = response.headers.get('content-length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      let loaded = 0;
+
+      const reader = response.body.getReader();
+      const chunks = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        if (total > 0) {
+          const pct = Math.min(100, Math.round((loaded / total) * 100));
+          progressFill.style.width = `${pct}%`;
+          statusLabel.textContent = `${label} 다운로드 중 (${(loaded / (1024 * 1024)).toFixed(1)}MB / ${(total / (1024 * 1024)).toFixed(1)}MB)`;
+        }
       }
 
-      window.EJS_player = '#game';
-      window.EJS_core = 'psx';
-      window.EJS_gameUrl = urlOrBlob;
-      window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
-      window.EJS_startOnLoaded = true;
-      window.EJS_backgroundColor = '#000000';
+      statusLabel.textContent = `${label} 압축 해제 및 메모리 로드 중...`;
+      progressFill.style.width = '100%';
 
+      const combined = new Uint8Array(loaded);
+      let offset = 0;
+      for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      // Native Web Streams DecompressionStream
+      const ds = new DecompressionStream('gzip');
+      const writer = ds.writable.getWriter();
+      writer.write(combined);
+      writer.close();
+
+      const decompressedChunks = [];
+      const dReader = ds.readable.getReader();
+      let totalDecompressed = 0;
+      while (true) {
+        const { done, value } = await dReader.read();
+        if (done) break;
+        decompressedChunks.push(value);
+        totalDecompressed += value.length;
+      }
+
+      const decompressed = new Uint8Array(totalDecompressed);
+      let dOffset = 0;
+      for (const chunk of decompressedChunks) {
+        decompressed.set(chunk, dOffset);
+        dOffset += chunk.length;
+      }
+
+      return decompressed;
+    }
+
+    async function initPreload() {
+      try {
+        // 1. Fetch OpenBIOS
+        statusLabel.textContent = 'OpenBIOS 준비 중...';
+        const biosResp = await fetch('bios/openbios.bin');
+        const biosData = new Uint8Array(await biosResp.arrayBuffer());
+
+        // 2. Fetch game.toml
+        const tomlResp = await fetch('game.toml');
+        const tomlData = new Uint8Array(await tomlResp.arrayBuffer());
+
+        // 3. Fetch SLUS_004.02
+        const slusResp = await fetch('disc/SLUS_004.02');
+        const slusData = new Uint8Array(await slusResp.arrayBuffer());
+
+        // 4. Fetch CUE
+        const cueResp = await fetch('disc/Tekken%203%20(USA).cue');
+        const cueData = new Uint8Array(await cueResp.arrayBuffer());
+
+        // 5. Fetch and decompress essential game assets (30.6MB -> 603MB virtual disc)
+        const track1Data = await fetchAndDecompress('tekken3_assets.bin.gz', '철권 3 게임 에셋');
+
+        preloadedAssets = {
+          biosData,
+          tomlData,
+          slusData,
+          cueData,
+          track1Data
+        };
+
+        statusLabel.textContent = '준비 완료! 클릭하여 플레이하세요.';
+        progressFill.style.width = '100%';
+        document.getElementById('progress-box').style.display = 'none';
+        btnStart.style.display = 'block';
+
+      } catch (err) {
+        console.error(err);
+        statusLabel.textContent = '로딩 오류: ' + err.message;
+        statusLabel.style.color = '#f87171';
+      }
+    }
+
+    // Launch Emscripten WebAssembly runtime
+    function launchGame() {
+      if (gameStarted || !preloadedAssets) return;
+      gameStarted = true;
+
+      splashScreen.classList.add('fade-out');
+      canvas.focus();
+
+      window.Module = {
+        canvas: canvas,
+        arguments: ['--config', 'game.toml'],
+        print: function(text) { console.log('[psxrecomp]', text); },
+        printErr: function(text) { console.error('[psxrecomp error]', text); },
+        preRun: [function() {
+          console.log('[psxrecomp] Staging virtual filesystem from preloaded assets...');
+          // Mount virtual files into Emscripten MEMFS
+          FS.mkdir('/disc');
+          FS.createDataFile('/disc', 'Tekken 3 (USA) (Track 1).bin', preloadedAssets.track1Data, true, true, true);
+          FS.createDataFile('/disc', 'Tekken 3 (USA).cue', preloadedAssets.cueData, true, true, true);
+          FS.createDataFile('/disc', 'SLUS_004.02', preloadedAssets.slusData, true, true, true);
+          
+          FS.mkdir('/bios');
+          FS.createDataFile('/bios', 'openbios.bin', preloadedAssets.biosData, true, true, true);
+          FS.createDataFile('/', 'game.toml', preloadedAssets.tomlData, true, true, true);
+
+          // Free memory references from preloadedAssets
+          preloadedAssets = null;
+          console.log('[psxrecomp] Virtual filesystem ready.');
+        }],
+        postRun: [function() {
+          console.log('[psxrecomp] Tekken 3 WebAssembly engine running.');
+        }],
+        onAbort: function(what) {
+          console.error('[psxrecomp abort]', what);
+        }
+      };
+
+      // Load Tekken_3_Recompiled.js
       const script = document.createElement('script');
-      script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+      script.src = 'Tekken_3_Recompiled.js';
       document.body.appendChild(script);
     }
 
-    async function handleStart() {
-      // 1. 로컬 환경에서 번들된 롬이 있는지 확인
-      try {
-        const testRes = await fetch('/game_data/track1.bin', { method: 'HEAD' });
-        if (testRes.ok) {
-          bootGame('/game_data/track1.bin');
-          return;
-        }
-      } catch (e) {}
-
-      // 2. GitHub Pages 등 롬이 없는 정적 배포 환경이면 파일 선택기 트리거
-      romPicker.click();
-    }
-
-    splash.addEventListener('click', handleStart);
+    btnStart.addEventListener('click', launchGame);
+    splashScreen.addEventListener('click', () => {
+      if (preloadedAssets) launchGame();
+    });
     window.addEventListener('keydown', (e) => {
-      if (!started && e.key !== 'F12') {
-        handleStart();
+      if (e.key === 'Enter' || e.key === ' ') {
+        if (preloadedAssets) launchGame();
       }
     });
 
-    romPicker.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) {
-        bootGame(URL.createObjectURL(e.target.files[0]));
-      }
-    });
-
-    // 드래그 앤 드롭 지원
-    window.addEventListener('dragover', (e) => e.preventDefault());
-    window.addEventListener('drop', (e) => {
-      e.preventDefault();
-      if (e.dataTransfer.files.length > 0) {
-        bootGame(URL.createObjectURL(e.dataTransfer.files[0]));
-      }
-    });
+    // Start downloading assets on page load
+    window.addEventListener('DOMContentLoaded', initPreload);
   </script>
 </body>
 </html>
