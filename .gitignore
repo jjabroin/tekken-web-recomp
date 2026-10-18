@@ -1,0 +1,15 @@
+# Security & Copyright: Never commit proprietary game ROMs or binaries
+game_data/
+*.bin
+*.cue
+*.iso
+*.chd
+*.gba
+*.zip
+disc/
+build/
+
+# OS / Tooling
+.DS_Store
+*.log
+node_modules/

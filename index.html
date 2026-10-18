@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>TEKKEN 3 • Web Recomp</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      cursor: none;
+    }
+
+    body.show-cursor {
+      cursor: default;
+    }
+
+    #game-viewport {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      background: #000;
+    }
+
+    #game {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #game canvas, #game video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+
+    /* 초기 스플래시 오버레이 */
+    #splash-screen {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      cursor: pointer;
+      transition: opacity 0.4s ease;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #splash-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .start-prompt {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #ef4444;
+      text-transform: uppercase;
+      animation: pulse 1.5s infinite;
+      margin-bottom: 8px;
+    }
+
+    .sub-hint {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 0.9rem;
+      color: #64748b;
+      letter-spacing: 2px;
+      max-width: 500px;
+      line-height: 1.6;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.35; }
+      50% { opacity: 1; }
+    }
+
+    /* 미니멀 HUD */
+    .mini-hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+    }
+
+    body.show-cursor .mini-hud {
+      opacity: 0.8;
+    }
+
+    .hud-tag {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 4px 10px;
+      border-radius: 4px;
+      color: #94a3b8;
+      font-size: 0.75rem;
+      font-family: monospace;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    #rom-picker {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-viewport">
+    <div id="game"></div>
+
+    <input type="file" id="rom-picker" accept=".bin,.cue,.iso,.chd,.zip">
+
+    <div id="splash-screen">
+      <div class="start-prompt">PRESS ANY KEY OR CLICK TO START</div>
+      <div class="sub-hint">TEKKEN 3 • BORDERLESS FULLSCREEN RUNTIME<br><span style="font-size: 0.75rem; color: #475569;">클릭하여 시작하거나 소장 중인 ROM(.bin/.iso)을 화면에 드래그하세요</span></div>
+    </div>
+
+    <div class="mini-hud">
+      <span class="hud-tag">60 FPS</span>
+      <span class="hud-tag">WEB RECOMP</span>
+      <span class="hud-tag">F11: FULLSCREEN</span>
+    </div>
+  </div>
+
+  <script>
+    const splash = document.getElementById('splash-screen');
+    const romPicker = document.getElementById('rom-picker');
+    let started = false;
+    let cursorTimer = null;
+
+    window.addEventListener('mousemove', () => {
+      document.body.classList.add('show-cursor');
+      clearTimeout(cursorTimer);
+      cursorTimer = setTimeout(() => {
+        document.body.classList.remove('show-cursor');
+      }, 2000);
+    });
+
+    function bootGame(urlOrBlob) {
+      if (started) return;
+      started = true;
+      splash.classList.add('fade-out');
+
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+
+      window.EJS_player = '#game';
+      window.EJS_core = 'psx';
+      window.EJS_gameUrl = urlOrBlob;
+      window.EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+      window.EJS_startOnLoaded = true;
+      window.EJS_backgroundColor = '#000000';
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.emulatorjs.org/stable/data/loader.js';
+      document.body.appendChild(script);
+    }
+
+    async function handleStart() {
+      // 1. 로컬 환경에서 번들된 롬이 있는지 확인
+      try {
+        const testRes = await fetch('/game_data/track1.bin', { method: 'HEAD' });
+        if (testRes.ok) {
+          bootGame('/game_data/track1.bin');
+          return;
+        }
+      } catch (e) {}
+
+      // 2. GitHub Pages 등 롬이 없는 정적 배포 환경이면 파일 선택기 트리거
+      romPicker.click();
+    }
+
+    splash.addEventListener('click', handleStart);
+    window.addEventListener('keydown', (e) => {
+      if (!started && e.key !== 'F12') {
+        handleStart();
+      }
+    });
+
+    romPicker.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        bootGame(URL.createObjectURL(e.target.files[0]));
+      }
+    });
+
+    // 드래그 앤 드롭 지원
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files.length > 0) {
+        bootGame(URL.createObjectURL(e.dataTransfer.files[0]));
+      }
+    });
+  </script>
+</body>
+</html>
